@@ -1,39 +1,102 @@
-// For format details, see https://aka.ms/devcontainer.json. For config options, see the
-// README at: https://github.com/devcontainers/templates/tree/main/src/python
 {
-	"name": "Python 3",
-	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-	"image": "mcr.microsoft.com/devcontainers/python:1-3.12",
-
-	// Features to add to the dev container. More info: https://containers.dev/features.
-	// "features": {},
-
-	// Configure tool-specific properties.
-	"customizations": {
-		// Configure properties specific to VS Code.
-		"vscode": {
-			"settings": {},
-			"extensions": [
-				"streetsidesoftware.code-spell-checker"
-			]
-		}
-	},
-	
-	// Use 'forwardPorts' to make a list of ports inside the container available locally.
-	// "forwardPorts": [9000],
-
-	// Use 'portsAttributes' to set default properties for specific forwarded ports. 
-	// More info: https://containers.dev/implementors/json_reference/#port-attributes
-	"portsAttributes": {
-		"9000": {
-			"label": "Hello Remote World",
-			"onAutoForward": "notify"
-		}
-	},
-
-	// Use 'postCreateCommand' to run commands after the container is created.
-	"postCreateCommand": "pip3 install -r requirements.txt"
-
-	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
-	// "remoteUser": "root"
+    "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+    "features": {
+        "ghcr.io/devcontainers/features/common-utils:2": {},
+        "ghcr.io/devcontainers/features/git:1": {}
+    },
+    "postCreateCommand": [
+        "sudo apt update",
+        "git clone https://github.com/leoleo0980627-web/git_pan /workspaces/git_pan_local || true",
+        
+        "cat > /workspaces/smart_parallel_install.sh << 'EOF'",
+        "#!/bin/bash",
+        "echo '🚀 智能並行安裝系統'",
+        "echo '===================='",
+        "",
+        "# 基礎安裝列表",
+        "base_packages=\"fish chafa tty-clock netris libcaca-utils cmatrix sl cowsay fortune\"",
+        "",
+        "# 檢查記憶檔案中的額外套件",
+        "APT_HISTORY=\"/workspaces/apt_history.txt\"",
+        "extra_packages=\"\"",
+        "if [ -f \"$APT_HISTORY\" ]; then",
+        "    echo '📚 檢測到歷史安裝記錄...'",
+        "    while IFS= read -r line; do",
+        "        if [[ \"$line\" =~ sudo\\ apt\\ install\\ -y\\ (.*) ]]; then",
+        "            extra_packages=\"$extra_packages ${BASH_REMATCH[1]}\"",
+        "        fi",
+        "    done < \"$APT_HISTORY\"",
+        "fi",
+        "",
+        "# 合併所有套件，去除重複",
+        "all_packages=$(echo \"$base_packages $extra_packages\" | tr ' ' '\\n' | sort -u | tr '\\n' ' ')",
+        "total_packages=$(echo \"$all_packages\" | wc -w)",
+        "",
+        "echo \"📦 總共安裝 $total_packages 個套件\"",
+        "echo \"🔧 套件列表: $all_packages\"",
+        "echo ''",
+        "echo '⏳ 開始並行安裝...'",
+        "",
+        "# 並行安裝",
+        "sudo apt install -y $all_packages",
+        "",
+        "echo '✅ 所有套件安裝完成！'",
+        "EOF",
+        
+        "chmod +x /workspaces/smart_parallel_install.sh",
+        "/workspaces/smart_parallel_install.sh",
+        
+        "# 設置記憶系統",
+        "cat > /workspaces/apt_memory.sh << 'EOF'",
+        "#!/bin/bash",
+        "APT_HISTORY=\"/workspaces/apt_history.txt\"",
+        "touch \"$APT_HISTORY\"",
+        "echo '📦 Apt 記憶系統已就緒'",
+        "echo '💾 歷史記錄位置: $APT_HISTORY'",
+        "EOF",
+        
+        "chmod +x /workspaces/apt_memory.sh",
+        
+        "# Fish 配置（包含自動記錄）",
+        "mkdir -p ~/.config/fish", 
+        "cat > ~/.config/fish/config.fish << 'FISHCONFIG'",
+        "function apt",
+        "    if contains install \\$argv[1]",
+        "        command apt \\$argv",
+        "        if test \\$status -eq 0",
+        "            set -l packages (string join \" \" \\$argv[2..-1])",
+        "            echo \"sudo apt install -y \\$packages\" >> /workspaces/apt_history.txt",
+        "            echo \"📦 已記錄: \\$packages\"",
+        "        end",
+        "    else",
+        "        command apt \\$argv",
+        "    end",
+        "end",
+        "",
+        "function fish_prompt",
+        "    if test -n \"\\$SSH_TTY\"",
+        "        echo -n (set_color brred)\"\\$USER\"(set_color white)'@'(set_color yellow)(prompt_hostname)' '",
+        "    end",
+        "    echo -n (set_color blue)(prompt_pwd)' '",
+        "    set_color -o",
+        "    if fish_is_root_user",
+        "        echo -n (set_color red)'# '",
+        "    end",
+        "    echo -n (set_color red)'❯'(set_color yellow)'❯'(set_color green)'❯ '",
+        "    set_color normal",
+        "end",
+        "FISHCONFIG",
+        
+        "chsh -s /usr/bin/fish",
+        "sleep 1",
+        "clear && fish"
+    ],
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-python.python",
+                "github.copilot"
+            ]
+        }
+    }
 }
